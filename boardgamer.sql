@@ -9,13 +9,14 @@ CREATE TABLE games (
   	name VARCHAR(127) NOT NULL, -- названия не уникально, тк совпадения бывают
   	name_sub VARCHAR(255) DEFAULT NULL, # доп название
   	name_original VARCHAR(127) DEFAULT NULL,
-  	playing_time VARCHAR(15) NOT NULL,  -- ~60 мин, 45-60. Разные формы записи
-  	age VARCHAR(15) NOT NULL, -- здесь обычно 12+, 6+, но быввает и 12-99, так что лучше строка
-  	players VARCHAR(15) NOT NULL, -- 2-4, 2+ вариантов много
+  	playing_time_from SMALLINT NOT NULL,
+  	playing_time_to SMALLINT DEFAULT NULL, -- возможно только одно время в первой колонке
+  	age TINYINT DEFAULT 0,
+  	players_from TINYINT DEFAULT 1,
+  	players_to TINYINT DEFAULT NULL,
   	description TEXT DEFAULT NULL, 
   	rating TINYINT UNSIGNED DEFAULT NULL, -- предполагается использовать ячейку до 100, а уже выводить как от 0.0 до 10.0 (с десятыми)
-  	logo VARCHAR(31) DEFAULT NULL -- 'name.jpg'
-  	
+  	logo VARCHAR(31) DEFAULT NULL -- 'name.jpg'	
 );
 
 -- издатель
@@ -29,7 +30,7 @@ CREATE TABLE publishers (
 CREATE TABLE publishers_games (
 	game_id BIGINT UNSIGNED NOT NULL,
     publisher_id BIGINT UNSIGNED NOT NULL,
-    published_at DATETIME DEFAULT NULL,
+    published_at YEAR DEFAULT NULL,
     INDEX fk_publishers_games_game_idx (game_id),
     INDEX fk_publishers_games_category_idx (publisher_id),
     CONSTRAINT fk_publishers_games_game FOREIGN KEY (game_id) REFERENCES games (id),
@@ -58,7 +59,7 @@ CREATE TABLE categories_games (
 -- изображения
 CREATE TABLE medias (
 	game_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-	url VARCHAR(63) NOT NULL,
+	url VARCHAR(127) NOT NULL,
 	media_type ENUM('img', 'pdf', 'file') NOT NULL,
 	INDEX fk_images_games_game_idx (game_id),
     CONSTRAINT fk_images_games_game FOREIGN KEY (game_id) REFERENCES games (id)
@@ -67,16 +68,17 @@ CREATE TABLE medias (
 -- пользователи
 CREATE TABLE users (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    first_name VARCHAR(145) NOT NULL,
-    last_name VARCHAR(145) NOT NULL,
+    nick_name VARCHAR(145) NOT NULL,
+    first_name VARCHAR(145) DEFAULT NULL,
+    last_name VARCHAR(145) DEFAULT NULL,
     email VARCHAR(145) NOT NULL,
-    phone INT UNSIGNED NOT NULL,
+    phone CHAR(11) DEFAULT NULL,
     password_hash CHAR(65) DEFAULT NULL,
     birthday DATE NOT NULL,
     user_status VARCHAR(31),
     city VARCHAR(127),
     country VARCHAR(127),
-    gender ENUM('f', 'm', 'x') NOT NULL,
+    gender ENUM('w', 'm', 'x') DEFAULT 'x',
     logo VARCHAR(31) DEFAULT NULL, -- 'name.jpg'
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -86,6 +88,7 @@ CREATE TABLE users (
 
 -- отзывы на игры
 CREATE TABLE reviews (
+	id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
     game_id BIGINT UNSIGNED NOT NULL,
     txt TEXT NOT NULL,
@@ -94,15 +97,24 @@ CREATE TABLE reviews (
     INDEX fk_reviews_user_idx (user_id),
     INDEX fk_reviews_game_idx (game_id),
     CONSTRAINT fk_reviews_users_user FOREIGN KEY (user_id) REFERENCES users (id),
-    CONSTRAINT fk_reviews_games_game FOREIGN KEY (game_id) REFERENCES games (id),
-    PRIMARY KEY (user_id, game_id)
+    CONSTRAINT fk_reviews_games_game FOREIGN KEY (game_id) REFERENCES games (id)
+);
+
+CREATE TABLE review_likes (
+	user_id BIGINT UNSIGNED NOT NULL,
+    review_id BIGINT UNSIGNED NOT NULL,
+    like_type BOOLEAN,
+    INDEX fk_likes_users_idx (user_id),
+    INDEX fk_likes_reviews_idx (review_id),
+    CONSTRAINT fk_likes_users_user FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT fk_likes_reviews_review FOREIGN KEY (review_id) REFERENCES reviews (id),
+    PRIMARY KEY (user_id, review_id)
 );
 
 CREATE TABLE rating_votes (
-	id BIGINT UNSIGNED NOT NULL,
 	user_id BIGINT UNSIGNED NOT NULL,
 	game_id BIGINT UNSIGNED NOT NULL,
-	vote ENUM('1', '2', '3', '4', '5', '6', '7', '8', '9', '10') NOT NULL,
+	vote TINYINT UNSIGNED NOT NULL,
 	created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, -- возможно пригодится, чтобы давать свежим голосам больший вес
 	INDEX fk_votes_author_idx (user_id),
     INDEX fk_votes_game_idx (game_id),
